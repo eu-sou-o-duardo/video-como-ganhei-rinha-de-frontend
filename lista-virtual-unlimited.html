@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lista Virtual - Unlimited</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+
+    .list {
+      width: 500px;
+      overflow: auto;
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .list__item {
+      background-color: #000;
+      padding-inline: 8px;
+      color: #fff;
+      border-bottom: 2px solid #fff;
+      display: flex;
+      align-items: center;
+    }
+  </style>
+</head>
+
+<body>
+  <ul class="list"></ul>
+
+  <script>
+    const qtdItems = 17_900_000;
+    const data = Array.from({ length: qtdItems }, (_, i) => i + 1);
+
+    const lineHeight = 36;
+    const limit = 15;
+    const visibleHeight = limit * lineHeight;
+    const maxVirualItemsLengh = 500_000;
+
+    const listElement = document.querySelector("ul");
+    listElement.style.height = lineHeight * limit + "px";
+
+    let scrollTop = 0;
+
+    listElement.addEventListener("scroll", (e) => {
+      scrollTop = e.currentTarget.scrollTop;
+      render();
+    });
+
+    render();
+
+    function render() {
+      listElement.innerHTML = "";
+
+      // calcula valores
+      const fullListHeight =
+        data.length > maxVirualItemsLengh
+          ? maxVirualItemsLengh
+          : data.length * lineHeight;
+
+      const scrollingPercentage =
+        (scrollTop * 100) / (fullListHeight - visibleHeight);
+      const startItemIndex = Math.floor(
+        (scrollingPercentage * (data.length - limit)) / 100
+      );
+      const endItemIndex = startItemIndex + limit;
+      const startSpacerHeight = scrollTop;
+      const endSpacerHeight = fullListHeight - startSpacerHeight - visibleHeight;
+
+      const startSpacer = document.createElement("li");
+      startSpacer.style.height = startSpacerHeight + "px";
+      listElement.append(startSpacer);
+
+      const items = data.slice(startItemIndex, endItemIndex);
+
+      items.forEach((item) => {
+        const listItem = document.createElement("li");
+        listItem.innerHTML = item.toLocaleString("pt-br");
+        listItem.style.height = lineHeight + "px";
+        listItem.classList.add("list__item");
+        listElement.append(listItem);
+      });
+
+      const endSpacer = document.createElement("li");
+      endSpacer.style.height = endSpacerHeight + "px";
+      listElement.append(endSpacer);
+    }
+
+  </script>
+</body>
+
+</html>

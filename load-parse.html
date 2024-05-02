@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Load & parse</title>
+</head>
+
+<body>
+  <input type="file" class="my-input">
+
+  <script>
+    const input = document.querySelector(".my-input");
+
+    const myWorker = new Worker("./my-worker.js");
+
+    let fileContent = "";
+    const loadTimes = [];
+    function addNewLoadTime(loadTime) {
+      if (loadTimes.length >= 20) {
+        loadTimes.shift();
+      }
+      loadTimes.push(loadTime);
+    }
+
+    input.addEventListener("change", (changeEvent) => {
+      const reader = new FileReader();
+      const chunkSize = 1024 * 1024; // 1 MB chunk size
+      let offset = 0;
+
+      const file = changeEvent.target.files[0];
+      let beginLoadTime = window.performance.now();
+      console.time("load-all");
+      reader.onload = function (loadEvent) {
+        const result = loadEvent.target.result;
+        myWorker.postMessage({ type: "chunk", data: result });
+        const endLoadTime = window.performance.now();
+        addNewLoadTime(endLoadTime - beginLoadTime);
+        console.count("load-chunk-count");
+        if (offset < file.size) {
+          readNextChunk();
+          return;
+        }
+
+        myWorker.postMessage({ type: "eof" });
+
+        console.log(
+          "avg load time:",
+          loadTimes.reduce((prev, acc) => prev + acc, 0) / loadTimes.length
+        );
+        console.timeEnd("load-all");
+      };
+
+      function readNextChunk() {
+        const blob = file.slice(offset, offset + chunkSize);
+        beginLoadTime = window.performance.now();
+        reader.readAsText(blob);
+        offset += chunkSize;
+      }
+
+      readNextChunk();
+    });
+
+    const acc = [];
+    let finalData = [];
+    myWorker.onmessage = function (e) {
+      const { type, data } = e.data;
+
+      if (type === "chunk") {
+        acc.push(data);
+      }
+
+      if (type === "eof") {
+        console.time("flat");
+        finalData = acc.flat();
+        console.timeEnd("flat");
+      }
+    };
+
+  </script>
+</body>
+
+</html>
